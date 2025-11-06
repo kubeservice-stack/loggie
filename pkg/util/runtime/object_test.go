@@ -17,10 +17,11 @@ limitations under the License.
 package runtime
 
 import (
-	"github.com/stretchr/testify/assert"
 	"reflect"
 	"regexp"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var data = map[string]interface{}{
@@ -75,11 +76,9 @@ func TestObject_Get(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			obj := &Object{
-				data: tt.fields.data,
-			}
+			obj := NewObject(tt.fields.data)
 			got := obj.Get(tt.args.key)
-			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.want.data, got.data)
 		})
 	}
 }
@@ -112,11 +111,9 @@ func TestObject_GetPaths(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			obj := &Object{
-				data: tt.fields.data,
-			}
-			if got := obj.GetPaths(tt.args.paths); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetPaths() = %v, want %v", got, tt.want)
+			obj := NewObject(tt.fields.data)
+			if got := obj.GetPaths(tt.args.paths); !reflect.DeepEqual(got.data, tt.want.data) {
+				t.Errorf("GetPaths() = %v, want %v", got.data, tt.want.data)
 			}
 		})
 	}
@@ -156,13 +153,11 @@ func TestObject_DelPaths(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			obj := &Object{
-				data: tt.fields.data,
-			}
+			obj := NewObject(tt.fields.data)
 			obj.DelPaths(tt.args.paths)
 
-			if !reflect.DeepEqual(obj, tt.want) {
-				t.Errorf("DelPaths() = %v, want %v", obj, tt.want)
+			if !reflect.DeepEqual(obj.data, tt.want.data) {
+				t.Errorf("DelPaths() = %v, want %v", obj.data, tt.want.data)
 			}
 
 		})
@@ -212,12 +207,11 @@ func TestObject_SetPaths(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			obj := &Object{
-				data: tt.fields.data,
-			}
+			obj := NewObject(tt.fields.data)
+
 			obj.SetPaths(tt.args.paths, tt.args.val)
-			if !reflect.DeepEqual(obj, tt.want) {
-				t.Errorf("SetPaths() = %v, want %v", obj, tt.want)
+			if !reflect.DeepEqual(obj.data, tt.want.data) {
+				t.Errorf("SetPaths() = %v, want %v", obj.data, tt.want.data)
 			}
 		})
 	}
@@ -277,11 +271,10 @@ func TestObject_GetPath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			obj := &Object{
-				data: tt.fields.data,
-			}
-			if got := obj.GetPath(tt.args.query); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetPath() = %v, want %v", got, tt.want)
+			obj := NewObject(tt.fields.data)
+
+			if got := obj.GetPath(tt.args.query); !reflect.DeepEqual(got.data, tt.want.data) {
+				t.Errorf("GetPath() = %v, want %v", got.data, tt.want.data)
 			}
 		})
 	}
@@ -314,9 +307,7 @@ func TestObject_FlatKeyValue(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			obj := &Object{
-				data: tt.fields.data,
-			}
+			obj := NewObject(tt.fields.data)
 			got, err := obj.FlatKeyValue("_")
 			assert.NoError(t, err)
 			assert.Equal(t, tt.want, got)
@@ -401,12 +392,10 @@ func TestObject_ConvertKeys(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			obj := &Object{
-				data: tt.fields.data,
-			}
+			obj := NewObject(tt.fields.data)
 			err := obj.ConvertKeys(tt.args.keyFunc)
 			assert.NoError(t, err)
-			assert.Equal(t, tt.want, obj)
+			assert.Equal(t, tt.want.data, obj.data)
 		})
 	}
 }
