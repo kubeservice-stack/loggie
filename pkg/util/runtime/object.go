@@ -45,10 +45,10 @@ func (obj *Object) Map() (map[string]interface{}, error) {
 }
 
 func (obj *Object) Get(key string) *Object {
-	obj.mu.RLock()
-	defer obj.mu.RUnlock()
 	m, err := obj.Map()
 	if err == nil {
+		obj.mu.RLock()
+		defer obj.mu.RUnlock()
 		if val, ok := m[key]; ok {
 			return &Object{
 				data: val,
@@ -68,14 +68,16 @@ func (obj *Object) GetPath(query string) *Object {
 
 func (obj *Object) GetPaths(paths []string) *Object {
 	obj.mu.RLock()
-	defer obj.mu.RUnlock()
 	o := obj
+	obj.mu.RUnlock()
 	for _, p := range paths {
 		m, err := o.Map()
 		if err != nil {
 			return &Object{data: nil, mu: obj.mu}
 		}
+		obj.mu.RLock()
 		val, ok := m[p]
+		obj.mu.RUnlock()
 		if !ok {
 			return &Object{data: nil, mu: obj.mu}
 		}
@@ -163,8 +165,8 @@ func (obj *Object) DelPaths(paths []string) {
 	obj.mu.RLock()
 	prefix := paths[:len(paths)-1]
 	fin := paths[len(paths)-1]
-	tmp := obj.GetPaths(prefix)
 	obj.mu.RUnlock() // 提前释放读锁，避免后续写锁冲突
+	tmp := obj.GetPaths(prefix)
 
 	// 对临时对象执行删除（此时无读锁，可安全获取写锁）
 	tmp.Del(fin)
@@ -222,15 +224,18 @@ func (obj *Object) Value() interface{} {
 }
 
 func (obj *Object) FlatKeyValue(token string) (map[string]interface{}, error) {
-	m, err := obj.Map()
+	obj.mu.RLock()
+	o := obj
+	obj.mu.RUnlock()
+	m, err := o.Map()
 	if err != nil {
 		return nil, err
 	}
 	if len(m) == 0 {
 		return m, nil
 	}
-	dest := make(map[string]interface{})
 	obj.mu.Lock()
+	dest := make(map[string]interface{})
 	flatten(token, "", m, dest)
 	obj.mu.Unlock()
 	return dest, nil
