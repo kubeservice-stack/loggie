@@ -317,6 +317,50 @@ func TestObject_FlatKeyValue(t *testing.T) {
 	}
 }
 
+func TestObject_FlattenConcurrent(t *testing.T) {
+	t.Skip("此测试故意触发崩溃，默认跳过")
+	dest := &safeMap{
+		mu:   &sync.Mutex{},
+		data: make(map[string]interface{}),
+	}
+	src := map[string]interface{}{
+		"a": 1,
+		"b": map[string]interface{}{"c": 2},
+		"d": []interface{}{3, 4},
+	}
+
+	var wg sync.WaitGroup
+
+	// 启动一个 goroutine 持续修改 dest（调用  写入）
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 500000; i++ { // 多次写入触发冲突
+			time.Sleep(time.Nanosecond)
+			flatten(".", "", src, dest)
+		}
+	}()
+
+	// 启动另一个 goroutine 持续迭代 dest（触发并发迭代）
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 500000; i++ { // 多次迭代触发冲突
+			ret, _ := dest.Copy()
+			for range ret { // 仅迭代键，不关心值
+				time.Sleep(time.Nanosecond) // 增加冲突概率
+			}
+			for range src { // 仅迭代键，不关心值
+				time.Sleep(time.Nanosecond) // 增加冲突概率
+			}
+		}
+	}()
+
+	wg.Wait()
+	// 如果未崩溃，说明测试未触发冲突（概率性），可增加循环次数
+	t.Error("未触发并发 map 错误（可能是概率问题）")
+}
+
 func TestObject_FlatKeyValueConcurrent(t *testing.T) {
 	t.Skip("此测试故意触发崩溃，默认跳过")
 	var dest map[string]interface{}

@@ -58,6 +58,9 @@ github.com/apache/rocketmq-client-go/v2/rlog
 # github.com/ardielle/ardielle-go v1.5.2
 ## explicit
 github.com/ardielle/ardielle-go/rdl
+# github.com/barkimedes/go-deepcopy v0.0.0-20220514131651-17c30cfc62df
+## explicit
+github.com/barkimedes/go-deepcopy
 # github.com/beorn7/perks v1.0.1
 ## explicit; go 1.11
 github.com/beorn7/perks/quantile

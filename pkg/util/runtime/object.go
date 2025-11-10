@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/barkimedes/go-deepcopy"
 	"github.com/pkg/errors"
 )
 
@@ -35,6 +36,36 @@ func NewObject(obj any) *Object {
 	}
 }
 
+type safeMap struct {
+	mu   *sync.Mutex
+	data map[string]interface{}
+}
+
+func (s *safeMap) Value() map[string]interface{} {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.data
+}
+
+func (s *safeMap) Copy() (map[string]interface{}, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	ret, err := deepcopy.Anything(s.data)
+	if err != nil {
+		return nil, err
+	}
+	if r, ok := ret.(map[string]interface{}); ok {
+		return r, nil
+	}
+	return nil, errors.New("type assert to map[string]interface{} failed")
+}
+
+func (s *safeMap) Set(key string, val interface{}) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.data[key] = val
+}
+
 func (obj *Object) Map() (map[string]interface{}, error) {
 	obj.mu.RLock()
 	defer obj.mu.RUnlock()
@@ -42,6 +73,15 @@ func (obj *Object) Map() (map[string]interface{}, error) {
 		return ret, nil
 	}
 	return nil, errors.New("type assert to map[string]interface{} failed")
+}
+func (obj *Object) Copy() (*Object, error) {
+	obj.mu.Lock()
+	defer obj.mu.Unlock()
+	ret, err := deepcopy.Anything(obj.data)
+	if err != nil {
+		return nil, err
+	}
+	return NewObject(ret), nil
 }
 
 func (obj *Object) Get(key string) *Object {
@@ -224,9 +264,10 @@ func (obj *Object) Value() interface{} {
 }
 
 func (obj *Object) FlatKeyValue(token string) (map[string]interface{}, error) {
-	obj.mu.RLock()
-	o := obj
-	obj.mu.RUnlock()
+	o, err := obj.Copy()
+	if err != nil {
+		return nil, err
+	}
 	m, err := o.Map()
 	if err != nil {
 		return nil, err
@@ -235,13 +276,16 @@ func (obj *Object) FlatKeyValue(token string) (map[string]interface{}, error) {
 		return m, nil
 	}
 	obj.mu.Lock()
-	dest := make(map[string]interface{})
+	dest := &safeMap{
+		mu:   &sync.Mutex{},
+		data: make(map[string]interface{}),
+	}
 	flatten(token, "", m, dest)
 	obj.mu.Unlock()
-	return dest, nil
+	return dest.Copy()
 }
 
-func flatten(token string, prefix string, src map[string]interface{}, dest map[string]interface{}) {
+func flatten(token string, prefix string, src map[string]interface{}, dest *safeMap) {
 	if len(prefix) > 0 {
 		prefix += token
 	}
@@ -251,10 +295,10 @@ func flatten(token string, prefix string, src map[string]interface{}, dest map[s
 			flatten(token, prefix+k, child, dest)
 		case []interface{}:
 			for i := 0; i < len(child); i++ {
-				dest[prefix+k+token+strconv.Itoa(i)] = child[i]
+				dest.Set(prefix+k+token+strconv.Itoa(i), child[i])
 			}
 		default:
-			dest[prefix+k] = v
+			dest.Set(prefix+k, v)
 		}
 	}
 }

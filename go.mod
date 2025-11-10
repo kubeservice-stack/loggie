@@ -176,6 +176,7 @@ require (
 
 require (
 	github.com/apache/rocketmq-client-go/v2 v2.1.1
+	github.com/barkimedes/go-deepcopy v0.0.0-20220514131651-17c30cfc62df
 	github.com/bytedance/sonic v1.9.2
 	github.com/dustin/go-humanize v1.0.0
 	github.com/elastic/go-elasticsearch/v7 v7.17.10
